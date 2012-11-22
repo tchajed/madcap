@@ -52,6 +52,12 @@ func normalize(points Points) {
 			if dimRange != 0.0 {
 				point[d] /= dimRange
 			}
+			if math.IsNaN(point[d]) {
+				point[d] = 0.0
+			}
+			if math.IsInf(point[d], 0) {
+				point[d] = 1.0
+			}
 		}
 	}
 }
@@ -141,7 +147,7 @@ func findClosest(centers []slicePoint, p Point, distF DistanceFunc) int {
 // Cluster the given points into k clusters, returning a list of assignments
 // with the semantics assignments[i] is the cluster index in [0, k) of points[i].
 // The dimensionality is taken to be the dimension of the first point.
-func Kmeans(points Points, k int, distanceFunc DistanceFunc) (assignments []int) {
+func Kmeans(points Points, k int, distanceFunc DistanceFunc) (assignments []int, cost float64) {
 	if points.Len() == 0 {
 		return
 	}
@@ -158,6 +164,9 @@ func Kmeans(points Points, k int, distanceFunc DistanceFunc) (assignments []int)
 		for xi := 0; xi < points.Len(); xi++ {
 			x := slicePoint(points.Vector(xi))
 			assignments[xi] = findClosest(centers, x, distanceFunc)
+			if assignments[xi] < 0 {
+				assignments[xi] = rand.Int() % k
+			}
 		}
 		// get new centers
 		centers, nilClusters := meanCenters(points, assignments, k)
@@ -167,8 +176,21 @@ func Kmeans(points Points, k int, distanceFunc DistanceFunc) (assignments []int)
 			fmt.Println(cluster, centers[cluster])
 		}
 		if len(nilClusters) > 0 {
-			fmt.Printf("iter %d has %d nil clusters\n", iter, len(nilClusters))
+			for _, i := range nilClusters {
+				centers[i] = randomCenter(min, max)
+			}
 		}
 	}
+	numPoints := make([]int, k)
+	for i, cluster := range assignments {
+		cost += distanceFunc(slicePoint(points.Vector(i)), centers[cluster])
+		numPoints[cluster]++
+	}
+	var sumSquaredPoints float64
+	for _, num := range numPoints {
+		sumSquaredPoints += float64(num * num)
+	}
+	// encourages an even spread by penalizing piling all points into one cluster
+	cost *= sumSquaredPoints
 	return
 }

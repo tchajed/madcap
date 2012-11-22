@@ -33,8 +33,8 @@ func loadSongs(rootpath string, processSong func(path string, num int) bool) []S
 			}
 			pathQueue <- path
 			songNum++
-			if songNum%10 == 0 {
-				fmt.Println(songNum)
+			if songNum%25 == 0 {
+				fmt.Fprintln(os.Stderr, songNum)
 			}
 			return nil
 		})
@@ -101,15 +101,35 @@ func main() {
 	songs := loadSongs(rootdir, func(path string, num int) bool {
 		return rand.Float64() < *songFrac && num < *songLimit
 	})
-	assignments := cluster.Kmeans(Songs(songs), 5, cluster.EuclideanDistance)
-	groups := make([][]Song, 5)
+	/*
+		// Trim the feature lists to 2 dimensions (a very poor college student's
+		// "dimensionality reduction"; who needs eigendecompositions and PCA?)
+		for _, song := range songs {
+			song.Features = song.Features[0:1]
+		}
+	*/
+	k := 4
+	assignments, cost := cluster.Kmeans(Songs(songs), k, cluster.EuclideanDistance)
+	for i := 0; i < 10; i++ {
+		newassignments, newcost := cluster.Kmeans(Songs(songs), k, cluster.EuclideanDistance)
+		fmt.Fprintln(os.Stderr, newcost)
+		if newcost < cost {
+			assignments, cost = newassignments, newcost
+		}
+	}
+	groups := make([][]Song, k)
 	for i, cluster := range assignments {
 		groups[cluster] = append(groups[cluster], songs[i])
 	}
 	for groupi, group := range groups {
-		fmt.Println("group", groupi, "-------------")
+		fmt.Println(fmt.Sprintf("groups%d = [", groupi))
+		fmt.Fprintln(os.Stderr, groupi, len(group))
 		for _, song := range group {
-			fmt.Println(song)
+			for _, f := range song.Features {
+				fmt.Printf("%f ", f)
+			}
+			fmt.Printf(";\n")
 		}
+		fmt.Println("];")
 	}
 }

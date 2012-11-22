@@ -9,6 +9,7 @@ import (
 
 type Spectrogram struct {
 	spectra [][]complex128
+	LogFreq []float64
 }
 
 // Compute the spectrogram of a signal with window width nfft and overlap
@@ -27,7 +28,7 @@ func Compute(signal []float64, nfft int, overlap float64) Spectrogram {
 			windowed[i] = s * window[i]
 		}
 		spectrum := fft.FFTReal(windowed)
-		// TODO: memory is still used for the entire spectrum since the GC doesn't
+		// FIXME: memory is still used for the entire spectrum since the GC doesn't
 		// understand and can't free internal and partial pointers, to free it must
 		// do a copy. If this spectrum persists for a while then we should do a
 		// copy().
@@ -35,7 +36,7 @@ func Compute(signal []float64, nfft int, overlap float64) Spectrogram {
 		start += off
 		end += off
 	}
-	spectrogram := Spectrogram{spectra}
+	spectrogram := Spectrogram{spectra, nil}
 	return spectrogram
 }
 
@@ -100,7 +101,8 @@ func (s *Spectrogram) Frequency(i, sr int) float64 {
 }
 
 // Compute spectral statistics for this spectrogram with a given sample rate sr,
-// which should be in samples/sec (Hz)
+// which should be in samples/sec (Hz). Returns a few sample statistics and also
+// populates s.LogFreq, energy at logarithmically spaced frequency bins
 func (s *Spectrogram) Stats(sr int) map[string]float64 {
 	const nfft = 1024
 	var (
@@ -145,5 +147,24 @@ func (s *Spectrogram) Stats(sr int) map[string]float64 {
 	// frequency with the most energy
 	statistics["maxEnergyFreq"] = s.Frequency(maxEnergyFreq, sr)
 	statistics["maxEnergyVal"] = maxEnergyVal
+	frequencyBins := [...]float64{100, 200, 300, 400, 600, 1000, 2000, 4000, 5000, 10000}
+	logFreqEnergySets := make([]dataset, len(frequencyBins)+1)
+	currIdx := 0
+	for i, spectrum := range s.spectra {
+		if currIdx < len(frequencyBins) && s.Frequency(i, sr) > frequencyBins[currIdx] {
+			currIdx++
+		}
+		var totalEnergy float64
+		for _, fhat := range spectrum {
+			totalEnergy += real(fhat * cmplx.Conj(fhat))
+		}
+		logFreqEnergySets[currIdx].Add(totalEnergy)
+	}
+	logFreqEnergy := make([]float64, len(logFreqEnergySets))
+	for i, set := range logFreqEnergySets {
+		logFreqEnergy[i] = set.Sum()
+	}
+	s.LogFreq = logFreqEnergy
+
 	return statistics
 }

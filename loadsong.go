@@ -68,7 +68,7 @@ func loadSong(filename string) (song Song, err error) {
 	arguments := []string{filename}
 	arguments = append(arguments, soxFormat...)
 	arguments = append(arguments, "-")
-	arguments = append(arguments, soxTrim(0, 4)...)
+	arguments = append(arguments, soxTrim(30, 4)...)
 	cmd := exec.Command("sox", arguments...)
 	buffer := new(bytes.Buffer)
 	cmd.Stdout = buffer
@@ -82,10 +82,11 @@ func loadSong(filename string) (song Song, err error) {
 	}
 	spectrogram := spectral.Compute(samples, 1024, 0.75)
 	statistics := spectrogram.Stats(22050)
-	features := []string{"cutoffFreq", "energyCV", "maxVarFreq", "maxEnergyFreq"}
+	features := []string{"cutoffFreq", "energyCV", "maxEnergyFreq", "maxVarFreq"}
 	song.Features = make([]float64, 0, len(features))
 	for _, stat := range features {
 		song.Features = append(song.Features, statistics[stat])
 	}
+	song.Features = append(song.Features, spectrogram.LogFreq...)
 	return
 }
