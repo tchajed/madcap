@@ -1,64 +1,57 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"github.com/ascherkus/go-id3/src/id3"
-	"madcap/spectral"
 	"os"
-	"os/exec"
-	"strconv"
+	"path/filepath"
 )
 
-type Song struct {
-	Features []float64
-	Info     map[string]string
-}
-
-var soxFormat []string = []string{"-r", "22.05k", "-e", "signed", "-b", "8", "-c", "1", "-t", ".raw"}
-
-// construct the sox effect to trim to get a specific start/length sample
-// expects start and length in seconds
-func soxTrim(start int, length int) []string {
-	return []string{"trim", strconv.Itoa(start), strconv.Itoa(length)}
-}
-
-func loadSong(filename string) (song Song, err error) {
-	f, err := os.Open(filename)
-	if err != nil {
+func loadSongs(rootpath string) []Song {
+	songs := make([]Song, 0)
+	songQueue := make(chan Song)
+	workQueue := make(chan string)
+	songsProcessed := 0
+	go func() {
+		filepath.Walk(rootpath, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() || songsProcessed > 50 {
+				return nil
+			}
+			workQueue <- path
+			songsProcessed++
+			return nil
+		})
+		close(workQueue)
 		return
+	}()
+	done := make(chan bool)
+	workersRemaining := 4
+	for i := 0; i < workersRemaining; i++ {
+		go func() {
+			for {
+				songpath, ok := <-workQueue
+				// if workQueue is empty then exit
+				if !ok {
+					done <- true
+					return
+				}
+				song, err := loadSong(songpath)
+				if err != nil {
+					continue
+				}
+				songQueue <- song
+			}
+		}()
 	}
-	id3info := id3.Read(f)
-	if id3info != nil {
-		song.Info = make(map[string]string)
-		song.Info["title"] = id3info.Name
-		song.Info["artist"] = id3info.Artist
+	for workersRemaining > 0 {
+		select {
+		case song := <-songQueue:
+			songs = append(songs, song)
+		case <-done:
+			workersRemaining--
+		}
 	}
-	f.Close()
-	arguments := []string{filename}
-	arguments = append(arguments, soxFormat...)
-	arguments = append(arguments, "-")
-	arguments = append(arguments, soxTrim(0, 5)...)
-	cmd := exec.Command("sox", arguments...)
-	buffer := new(bytes.Buffer)
-	cmd.Stdout = buffer
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	samples := make([]float64, buffer.Len())
-	for i, sample := range buffer.Bytes() {
-		samples[i] = float64(sample)
-	}
-	spectrogram := spectral.Compute(samples, 1024, 0.75)
-	statistics := spectrogram.Stats(22050)
-	features := []string{"cutoffFreq", "energyCV", "maxVarFreq", "maxEnergyFreq"}
-	song.Features = make([]float64, 0, len(features))
-	for _, stat := range features {
-		song.Features = append(song.Features, statistics[stat])
-	}
-	return
+	return songs
 }
 
 func main() {
@@ -67,7 +60,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
 	}
-	filename := flag.Args()[0]
-	song, _ := loadSong(filename)
-	fmt.Println(song)
+	rootdir := flag.Args()[0]
+	songs := loadSongs(rootdir)
+	for _, song := range songs {
+		fmt.Println(song)
+	}
 }
