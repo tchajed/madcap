@@ -28,10 +28,6 @@ func soxTrim(start int, length int) []string {
 }
 
 func loadSong(filename string) (song Song, err error) {
-	fmt.Println("starting loadSong")
-	defer func() {
-		fmt.Println("loadSong exiting")
-	}()
 	f, err := os.Open(filename)
 	if err != nil {
 		return
@@ -46,7 +42,7 @@ func loadSong(filename string) (song Song, err error) {
 	arguments := []string{filename}
 	arguments = append(arguments, soxFormat...)
 	arguments = append(arguments, "-")
-	arguments = append(arguments, soxTrim(0, 5)...)
+	arguments = append(arguments, soxTrim(0, 4)...)
 	cmd := exec.Command("sox", arguments...)
 	buffer := new(bytes.Buffer)
 	cmd.Stdout = buffer
