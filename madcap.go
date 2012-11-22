@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"madcap/cluster"
 	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
+	"time"
 )
 
 // Load a directory of songs recursively, using a function to determine whether
@@ -31,6 +33,9 @@ func loadSongs(rootpath string, processSong func(path string, num int) bool) []S
 			}
 			pathQueue <- path
 			songNum++
+			if songNum%10 == 0 {
+				fmt.Println(songNum)
+			}
 			return nil
 		})
 		close(pathQueue)
@@ -38,7 +43,7 @@ func loadSongs(rootpath string, processSong func(path string, num int) bool) []S
 	}()
 	done := make(chan bool)
 	// this is the max number of simultaneous calls to loadSong
-	workersRemaining := 4
+	workersRemaining := 8
 	for i := 0; i < workersRemaining; i++ {
 		go func() {
 			for {
@@ -48,7 +53,6 @@ func loadSongs(rootpath string, processSong func(path string, num int) bool) []S
 					done <- true
 					return
 				}
-				fmt.Println(songpath)
 				song, err := loadSong(songpath)
 				if err != nil {
 					continue
@@ -93,10 +97,19 @@ func main() {
 		*songLimit = math.MaxInt32
 	}
 	rootdir := flag.Args()[0]
+	rand.Seed(time.Now().UnixNano())
 	songs := loadSongs(rootdir, func(path string, num int) bool {
 		return rand.Float64() < *songFrac && num < *songLimit
 	})
-	for _, song := range songs {
-		fmt.Println(song)
+	assignments := cluster.Kmeans(Songs(songs), 5, cluster.EuclideanDistance)
+	groups := make([][]Song, 5)
+	for i, cluster := range assignments {
+		groups[cluster] = append(groups[cluster], songs[i])
+	}
+	for groupi, group := range groups {
+		fmt.Println("group", groupi, "-------------")
+		for _, song := range group {
+			fmt.Println(song)
+		}
 	}
 }
