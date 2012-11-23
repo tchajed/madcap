@@ -78,6 +78,8 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	var songLimit = flag.Int("limit", 0, "song limit (<= 0 means no limit)")
 	var songFrac = flag.Float64("frac", 1, "fraction of songs to consider")
+	var octavefile = flag.String("octave", "", "file to output octave data to")
+	var jsfile = flag.String("js", "", "file to output js data to")
 	flag.Parse()
 	if flag.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
@@ -110,9 +112,8 @@ func main() {
 	*/
 	k := 4
 	assignments, cost := cluster.Kmeans(Songs(songs), k, cluster.EuclideanDistance)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		newassignments, newcost := cluster.Kmeans(Songs(songs), k, cluster.EuclideanDistance)
-		fmt.Fprintln(os.Stderr, newcost)
 		if newcost < cost {
 			assignments, cost = newassignments, newcost
 		}
@@ -121,15 +122,45 @@ func main() {
 	for i, cluster := range assignments {
 		groups[cluster] = append(groups[cluster], songs[i])
 	}
-	for groupi, group := range groups {
-		fmt.Println(fmt.Sprintf("groups%d = [", groupi))
-		fmt.Fprintln(os.Stderr, groupi, len(group))
-		for _, song := range group {
-			for _, f := range song.Features {
-				fmt.Printf("%f ", f)
-			}
-			fmt.Printf(";\n")
+	// octave/matlab output
+	if *octavefile != "" {
+		f, err := os.Create(*octavefile)
+		if err != nil {
+			log.Fatal(err.Error())
 		}
-		fmt.Println("];")
+		for groupi, group := range groups {
+			fmt.Fprintln(f, fmt.Sprintf("groups%d = [", groupi))
+			fmt.Fprintln(os.Stderr, groupi, len(group))
+			for _, song := range group {
+				for _, feat := range song.Features {
+					fmt.Fprintf(f, "%f ", feat)
+				}
+				fmt.Fprintf(f, ";\n")
+			}
+			fmt.Fprintln(f, "];")
+		}
+	}
+	if *jsfile != "" {
+		f, err := os.Create(*jsfile)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		fmt.Fprintln(f, "songs = [")
+		for groupi, group := range groups {
+			for _, song := range group {
+				fmt.Fprintf(f, "{")
+				// output features
+				fmt.Fprintf(f, "\"features\":[")
+				for _, v := range song.Features {
+					fmt.Fprintf(f, "%f,\n", v)
+				}
+				fmt.Fprintf(f, "],")
+				// output cluster label
+				fmt.Fprintf(f, "\"cluster\":%d,", groupi)
+				fmt.Fprintf(f, "\"info\":\"%s\",", song.String())
+				fmt.Fprintf(f, "},\n")
+			}
+		}
+		fmt.Fprintln(f, "];")
 	}
 }

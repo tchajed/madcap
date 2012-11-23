@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 )
@@ -173,7 +172,6 @@ func Kmeans(points Points, k int, distanceFunc DistanceFunc) (assignments []int,
 		// re-initialize these clusters
 		for _, cluster := range nilClusters {
 			centers[cluster] = randomCenter(min, max)
-			fmt.Println(cluster, centers[cluster])
 		}
 		if len(nilClusters) > 0 {
 			for _, i := range nilClusters {

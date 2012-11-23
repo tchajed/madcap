@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://d3js.org/d3.v2.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script> 
+  <script type="text/javascript" src="jquery.tipsy.js"></script>
+  <link href="tipsy.css" rel="stylesheet" type="text/css" />
+  <script src="songs.js"></script>
+</head>
+<body>
+  <script type="text/javascript">
+  var svg = d3.select("body").append("svg")
+    .attr("width", 400)
+    .attr("height", 400)
+    .attr("transform", "translate(2,2)");
+  svg.selectAll("circle")
+    .data(songs)
+    .enter().append("circle")
+    .attr("cx", function(d) { return d.features[0] * 200 + 100; })
+    .attr("cy", function(d) { return d.features[1] * 200 + 100; })
+    .attr("r", 3.0)
+    .style("fill", function(d) {
+      return d3.scale.linear().domain([0,3]).range(d3.scale.category10().range())(d.cluster);
+    });
+    $("svg circle").tipsy({
+      gravity: 'w',
+      html: true,
+      title: function() {
+        var d = this.__data__;
+        return d.info;
+      }
+    })
+  </script>
+</body>
+</html>
