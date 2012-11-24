@@ -82,7 +82,8 @@ func main() {
 	var jsfile = flag.String("js", "", "file to output js data to")
 	flag.Parse()
 	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "not enough arguments")
+		fmt.Fprintln(os.Stderr, "Please provide a directory containing music files")
+		flag.Usage()
 		os.Exit(1)
 	}
 	// Write out a cpuprofile; runtime/pprof makes this ridiculously easy
