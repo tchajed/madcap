@@ -9,15 +9,17 @@
 </head>
 <body>
   <script type="text/javascript">
+  var size = 600;
+  var borderSize = 10;
   var svg = d3.select("body").append("svg")
-    .attr("width", 400)
-    .attr("height", 400)
+    .attr("width", size + borderSize)
+    .attr("height", size + borderSize)
     .attr("transform", "translate(2,2)");
   svg.selectAll("circle")
     .data(songs)
     .enter().append("circle")
-    .attr("cx", function(d) { return d.features[0] * 200 + 100; })
-    .attr("cy", function(d) { return d.features[1] * 200 + 100; })
+    .attr("cx", function(d) { return d.features[0] * size + borderSize; })
+    .attr("cy", function(d) { return d.features[1] * size + borderSize; })
     .attr("r", 3.0)
     .style("fill", function(d) {
       return d3.scale.linear().domain([0,3]).range(d3.scale.category10().range())(d.cluster);

@@ -162,7 +162,7 @@ func (s *Spectrogram) Stats(sr int) map[string]float64 {
 	}
 	logFreqEnergy := make([]float64, len(logFreqEnergySets))
 	for i, set := range logFreqEnergySets {
-		logFreqEnergy[i] = set.Sum()
+		logFreqEnergy[i] = math.Log(set.Sum())
 	}
 	s.LogFreq = logFreqEnergy
 

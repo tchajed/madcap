@@ -105,7 +105,8 @@ func main() {
 	})
 	/*
 		// Trim the feature lists to 2 dimensions (a very poor college student's
-		// "dimensionality reduction"; who needs eigendecompositions and PCA?)
+		// "dimensionality reduction")
+		// TODO: implement bindings to LAPACK or implement a basic eigendecomposition
 		for _, song := range songs {
 			song.Features = song.Features[0:1]
 		}
