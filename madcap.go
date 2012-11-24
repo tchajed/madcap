@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/tchajed/madcap/cluster"
 	"log"
-	"madcap/cluster"
 	"math"
 	"math/rand"
 	"os"

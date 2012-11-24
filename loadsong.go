@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/ascherkus/go-id3/src/id3"
-	"madcap/spectral"
+	"github.com/tchajed/madcap/spectral"
 	"os"
 	"os/exec"
 	"strconv"
