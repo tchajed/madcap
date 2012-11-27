@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/tchajed/madcap/cluster"
@@ -164,7 +165,14 @@ func main() {
 				fmt.Fprintf(f, "],")
 				// output cluster label
 				fmt.Fprintf(f, "\"cluster\":%d,", groupi)
-				fmt.Fprintf(f, "\"info\":\"%s\",", song.String())
+				jsonSongBytes, err := json.Marshal(song.String())
+				var jsonSong string
+				if err != nil {
+					jsonSong = "\"\""
+				} else {
+					jsonSong = string(jsonSongBytes)
+				}
+				fmt.Fprintf(f, "\"info\":%s,", jsonSong)
 				fmt.Fprintf(f, "},\n")
 			}
 		}
