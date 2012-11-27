@@ -86,6 +86,11 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+	if *cpuprofile == "" && *jsfile == "" && *octavefile == "" {
+		fmt.Fprintln(os.Stderr, "No outputs specified - specify at least one of cpuprofile, octave or js options")
+		flag.Usage()
+		os.Exit(1)
+	}
 	// Write out a cpuprofile; runtime/pprof makes this ridiculously easy
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
